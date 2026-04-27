@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+<link rel="apple-touch-icon" href="https://icooon-mono.com/i/icon_11221/icon_112210.svg">
+
+<style>
+    /* ★スクロールを禁止し、1枚の板として表示させるための修正★ */
+    html, body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden; /* 中でのスクロールを禁止 */
+        background: #fdfaf5;
+        height: 100%;
+        width: 100%;
+    }
+
+    /* 全体のコンテナを少し余裕を持たせて配置 */
+    .main-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        padding-bottom: 100px; /* 下に余白を作って、パネルが隠れないようにする */
+    }
+
+    /* デザイン系（前回と同じ） */
+    .neuo-card { background: #fffefb; border-radius: 25px; box-shadow: 6px 6px 12px #f2efeb, -6px -6px 12px #ffffff; border: 1px solid rgba(255,255,255,0.5); }
+    .header { padding: 20px; width: 85%; max-width: 350px; text-align: center; margin-top: 20px; z-index: 10; position: relative; }
+    .streak-val { font-size: 48px; font-weight: 900; background: linear-gradient(135deg, #ffbc00, #ff5e3a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 5px 0; display: inline-block; }
+    
+    .nav-area { display: flex; gap: 8px; margin: 15px 0; align-items: center; z-index: 10; }
+    select { padding: 8px 15px; border-radius: 12px; border: none; font-size: 15px; background: #fffefb; box-shadow: inset 2px 2px 5px #f2efeb, inset -2px -2px 5px #ffffff; font-weight: bold; color: #555; }
+
+    .calendar-container { width: 90%; max-width: 370px; padding: 15px 10px; margin-bottom: 20px; z-index: 10; }
+    .weekday-header { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; font-size: 12px; margin-bottom: 10px; color: #bbb; }
+    .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0px; row-gap: 8px; }
+    .day-box { aspect-ratio: 1.1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 6px; font-size: 13px; cursor: pointer; position: relative; z-index: 1; }
+    
+    /* 繋がる帯 */
+    .day-box.connected::before { content: ''; position: absolute; top: 10%; bottom: 10%; left: -1px; right: -1px; background: rgba(255, 188, 0, 0.15); z-index: -1; }
+    .day-box.conn-start::before { border-radius: 20px 0 0 20px; left: 5px; }
+    .day-box.conn-end::before { border-radius: 0 20px 20px 0; right: 5px; }
+    .day-box.conn-solo::before { border-radius: 20px; left: 5px; right: 5px; }
+    
+    .today { box-shadow: 0 0 0 2px #78b1ff; background: #eef6ff !important; border-radius: 12px; }
+    .day-num { font-weight: bold; color: #777; z-index: 2; }
+    .stamps { font-size: 15px; min-height: 1.2em; margin-top: 3px; z-index: 2; display: flex; gap: 1px; }
+
+    /* 入力パネル */
+    #inputPanel { 
+        display: none; position: fixed; bottom: 0; left: 0; right: 0; 
+        background: #fffefb; padding: 30px 20px 60px 20px; border-radius: 35px 35px 0 0;
+        box-shadow: 0 -10px 40px rgba(0,0,0,0.1); text-align: center; z-index: 100;
+    }
+    .panel-btn-container { display: flex; justify-content: center; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+    .panel-btn { width: 100px; height: 85px; font-size: 16px; font-weight: bold; border: 2px solid transparent; border-radius: 22px; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+
+    #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.1); z-index: 50; }
+</style>
+</head>
+<body>
+
+<div class="main-wrapper">
+    <div id="overlay" onclick="closePanel()"></div>
+    <div id="celebration"></div>
+
+    <div class="header neuo-card">
+        <div style="font-size:11px; color:#aaa; font-weight:bold; letter-spacing:0.1em;">TOTAL DAYS</div>
+        <div><span id="totalStreak" class="streak-val">0</span><span id="streakUnit" style="font-size:18px; font-weight:bold; color:#555;"> 日目</span></div>
+        <div id="restStatus" style="font-size:11px; color:#888; margin-top:5px; font-weight:bold;">🏠 おやすみ残: 1回</div>
+    </div>
+
+    <div class="nav-area">
+        <select id="yearSelect" onchange="renderCalendar()"></select>
+        <select id="monthSelect" onchange="renderCalendar()"></select>
+    </div>
+
+    <div class="calendar-container neuo-card">
+        <div class="weekday-header">
+            <div style="color:#ff807b">日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div style="color:#78b1ff">土</div>
+        </div>
+        <div id="calendar" class="calendar"></div>
+    </div>
+
+    <div id="inputPanel">
+        <h3 id="selectedDateText" style="margin-top:0; color:#333;">日付を選択</h3>
+        <div class="panel-btn-container">
+            <button id="poopBtnPanel" class="panel-btn" style="background:#a0522d;" onclick="toggleMark('poop')"><span>💩</span><span>うんこ</span></button>
+            <button id="runBtnPanel" class="panel-btn" style="background:#4cd964;" onclick="toggleMark('run')"><span>🏃</span><span>運動</span></button>
+            <button id="restBtnPanel" class="panel-btn" style="background:#5ac8fa;" onclick="toggleMark('rest')"><span>🏠</span><span>お休み</span></button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // JS部分は変更なしで動作するように構造を合わせています
+    let db = JSON.parse(localStorage.getItem('healthLogData_vFinal')) || {};
+    const now = new Date();
+    let selectedKey = null;
+
+    function init() {
+        const ySel = document.getElementById('yearSelect');
+        const mSel = document.getElementById('monthSelect');
+        for (let y = now.getFullYear()-1; y <= now.getFullYear()+1; y++) ySel.add(new Option(y+"年",y,y===now.getFullYear()));
+        for (let m = 1; m <= 12; m++) mSel.add(new Option(m+"月",m,m===now.getMonth()+1));
+        renderCalendar();
+    }
+
+    function renderCalendar() {
+        const cal = document.getElementById('calendar'); cal.innerHTML = '';
+        const y = parseInt(document.getElementById('yearSelect').value), m = parseInt(document.getElementById('monthSelect').value);
+        const first = new Date(y, m-1, 1).getDay(), last = new Date(y, m, 0).getDate();
+        for (let i=0; i<first; i++) cal.appendChild(document.createElement('div'));
+        const dayEls = [];
+        for (let d=1; d<=last; d++) {
+            const key = `${y}-${m}-${d}`;
+            const el = document.createElement('div'); el.className = 'day-box';
+            const log = db[key] || { poop:false, run:false, rest:false };
+            if (y===now.getFullYear() && m===now.getMonth()+1 && d===now.getDate()) el.classList.add('today');
+            el.innerHTML = `<span class="day-num">${d}</span><div class="stamps">${(log.poop?'💩':'')}${(log.run?'🏃':'')}${(log.rest?'🏠':'')}</div>`;
+            el.onclick = () => openPanel(key);
+            cal.appendChild(el);
+            dayEls[d] = { el, active: (log.run || log.rest) };
+        }
+        for (let d=1; d<=last; d++) {
+            if (dayEls[d].active) {
+                const prev = d > 1 ? dayEls[d-1].active : false;
+                const next = d < last ? dayEls[d+1].active : false;
+                dayEls[d].el.classList.add('connected');
+                if (!prev && !next) dayEls[d].el.classList.add('conn-solo');
+                else if (!prev) dayEls[d].el.classList.add('conn-start');
+                else if (!next) dayEls[d].el.classList.add('conn-end');
+            }
+        }
+        document.getElementById('totalStreak').innerText = Object.values(db).filter(v => v.run || v.rest).length;
+    }
+
+    function openPanel(key) {
+        selectedKey = key; document.getElementById('selectedDateText').innerText = key.replace(/-/g, '/');
+        const log = db[key] || { poop:false, run:false, rest:false };
+        document.getElementById('inputPanel').style.display = 'block'; document.getElementById('overlay').style.display = 'block';
+    }
+    function closePanel() { document.getElementById('inputPanel').style.display='none'; document.getElementById('overlay').style.display='none'; }
+    function toggleMark(type) {
+        if (!db[selectedKey]) db[selectedKey] = { poop:false, run:false, rest:false };
+        db[selectedKey][type] = !db[selectedKey][type];
+        localStorage.setItem('healthLogData_vFinal', JSON.stringify(db));
+        renderCalendar(); setTimeout(closePanel, 300);
+    }
+    init();
+</script>
+</body>
+</html>
