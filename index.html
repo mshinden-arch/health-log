@@ -53,7 +53,17 @@
     
     .today { border-color: #78b1ff !important; background: #eef6ff !important; border-radius: 12px; }
     .day-num { font-weight: bold; color: #777; z-index: 2; }
-    .stamps { font-size: 15px; min-height: 1.2em; margin-top: 3px; z-index: 2; display: flex; gap: 1px; }
+
+    /* ★ズレ修正: スタンプエリアの中央寄せ★ */
+    .stamps { 
+        font-size: 14px; 
+        min-height: 1.2em; 
+        margin-top: 2px; 
+        z-index: 5; 
+        display: flex; 
+        justify-content: center; 
+        gap: 1px; 
+    }
 
     #inputPanel { 
         display: none; position: fixed; bottom: 0; left: 0; right: 0; 
@@ -122,7 +132,7 @@
         const ySel = document.getElementById('yearSelect');
         const mSel = document.getElementById('monthSelect');
         
-        // 年の選択肢（前後1年分）
+        // 年の選択肢
         for (let y = now.getFullYear()-1; y <= now.getFullYear()+1; y++) {
             ySel.add(new Option(y+"年", y, y===now.getFullYear(), y===now.getFullYear()));
         }
@@ -132,7 +142,7 @@
         }
         
         checkAutoRest();
-        renderCalendar(); // 初回起動時に今年・今月を自動描画
+        renderCalendar();
     }
 
     function checkAutoRest() {
