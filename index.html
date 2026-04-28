@@ -8,16 +8,14 @@
 <meta name="theme-color" content="#fdfaf5">
 <title>健康ログ</title>
 
+<link rel="apple-touch-icon" href="./icon.png">
+<link rel="icon" href="./icon.png">
 <link rel="manifest" href="./manifest.json">
-<link rel="apple-touch-icon" href="https://icooon-mono.com/i/icon_11221/icon_112210.png">
 
 <script>
-// オフラインでも動かすためのService Worker登録
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./service-worker.js').catch(() => {
-        console.log('Service Workerの登録に失敗しましたが、アプリは動作します。');
-    });
+    navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
   });
 }
 </script>
@@ -50,17 +48,16 @@ if ('serviceWorker' in navigator) {
     .nav-area { display: flex; gap: 8px; margin: 15px 0; align-items: center; z-index: 10; }
     select { padding: 8px 15px; border-radius: 12px; border: none; font-size: 15px; background: #fffefb; box-shadow: inset 2px 2px 5px #f2efeb, inset -2px -2px 5px #ffffff; font-weight: bold; color: #555; }
 
-    .calendar-container { width: 92%; max-width: 370px; padding: 15px 5px; margin-bottom: 20px; z-index: 10; }
+    /* ★修正: padding-bottomを30pxに増やし、下の突破を防ぐ★ */
+    .calendar-container { width: 92%; max-width: 370px; padding: 15px 10px 30px 10px; margin-bottom: 20px; z-index: 10; box-sizing: border-box; }
     .weekday-header { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; font-size: 12px; margin-bottom: 10px; color: #bbb; }
     .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
     
-    /* ★デバッグ済: 画面幅に応じた高さ＋マスの底にスタンプを固定★ */
+    /* ★修正: マスを正方形（aspect-ratio: 1）に固定し、スタンプを上に詰める★ */
     .day-box { 
-        height: 14vw; 
-        max-height: 65px;
-        min-height: 55px; 
-        display: flex; flex-direction: column; align-items: center;
-        padding: 5px 0 2px 0; font-size: 13px; cursor: pointer; position: relative; z-index: 1;
+        aspect-ratio: 1;
+        display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+        padding-top: 6px; font-size: 13px; cursor: pointer; position: relative; z-index: 1;
     }
     
     .day-box.connected::before { content: ''; position: absolute; top: 12%; bottom: 12%; left: -2px; right: -2px; background: rgba(255, 188, 0, 0.15); z-index: -1; }
@@ -69,10 +66,9 @@ if ('serviceWorker' in navigator) {
     .day-box.conn-solo::before { border-radius: 18px; left: 3px; right: 3px; }
     
     .today { border: 2px solid #78b1ff; background: #eef6ff !important; border-radius: 12px; }
-    .day-num { font-weight: bold; color: #777; z-index: 2; }
+    .day-num { font-weight: bold; color: #777; z-index: 2; line-height: 1; margin-bottom: 4px; }
 
     .stamps { 
-        margin-top: auto; /* マスの最下部にスタンプを押し付ける（はみ出し防止） */
         font-size: 14px; 
         z-index: 2; 
         display: flex; 
@@ -80,6 +76,7 @@ if ('serviceWorker' in navigator) {
         flex-wrap: wrap;
         gap: 1px;
         width: 100%;
+        line-height: 1;
     }
 
     #inputPanel { 
@@ -140,7 +137,6 @@ if ('serviceWorker' in navigator) {
 </div>
 
 <script>
-    // ★デバッグ済: 過去の記録が消えないように、元の保存先名を指定★
     let db = JSON.parse(localStorage.getItem('healthLogData_vFinal')) || {};
     const now = new Date();
     let selectedKey = null;
@@ -156,7 +152,6 @@ if ('serviceWorker' in navigator) {
             mSel.add(new Option(m+"月", m));
         }
         
-        // ★デバッグ済: Safariのキャッシュに負けないよう、JSで強制的に「今の年月」を選択させる★
         ySel.value = now.getFullYear();
         mSel.value = now.getMonth() + 1;
         
