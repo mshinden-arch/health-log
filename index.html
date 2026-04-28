@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="https://icooon-mono.com/i/icon_11221/icon_112210.png">
 
 <script>
-// ★オフラインでも動かすためのService Worker登録★
+// オフラインでも動かすためのService Worker登録
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./service-worker.js');
@@ -142,8 +142,15 @@ if ('serviceWorker' in navigator) {
     function init() {
         const ySel = document.getElementById('yearSelect');
         const mSel = document.getElementById('monthSelect');
-        for (let y = now.getFullYear()-1; y <= now.getFullYear()+1; y++) ySel.add(new Option(y+"年",y,y===now.getFullYear()));
-        for (let m = 1; m <= 12; m++) mSel.add(new Option(m+"月",m,m===now.getMonth()+1));
+        
+        // ★ここを修正！確実に「今の年と月」をデフォルト選択状態にします★
+        for (let y = now.getFullYear()-1; y <= now.getFullYear()+1; y++) {
+            ySel.add(new Option(y+"年", y, y===now.getFullYear(), y===now.getFullYear()));
+        }
+        for (let m = 1; m <= 12; m++) {
+            mSel.add(new Option(m+"月", m, m===now.getMonth()+1, m===now.getMonth()+1));
+        }
+        
         checkAutoRest();
         renderCalendar();
     }
