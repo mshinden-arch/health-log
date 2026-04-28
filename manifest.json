@@ -1,0 +1,21 @@
+{
+  "name": "健康ログ",
+  "short_name": "健康ログ",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fdfaf5",
+  "theme_color": "#fdfaf5",
+  "icons": [
+    {
+      "src": "https://icooon-mono.com/i/icon_11221/icon_112210.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://icooon-mono.com/i/icon_11221/icon_112210.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
