@@ -9,10 +9,10 @@
 <title>健康ログ</title>
 
 <link rel="manifest" href="./manifest.json">
-<link rel="apple-touch-icon" href="https://icooon-mono.com/i/icon_11221/icon_112210.png">
+<link rel="apple-touch-icon" href="./icon.png">
+<link rel="icon" href="./icon.png">
 
 <script>
-// オフラインでも動かすためのService Worker登録
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
@@ -48,19 +48,19 @@ if ('serviceWorker' in navigator) {
     .nav-area { display: flex; gap: 8px; margin: 15px 0; align-items: center; z-index: 10; }
     select { padding: 8px 15px; border-radius: 12px; border: none; font-size: 15px; background: #fffefb; box-shadow: inset 2px 2px 5px #f2efeb, inset -2px -2px 5px #ffffff; font-weight: bold; color: #555; }
 
-    /* ★修正: padding-bottomを25pxに増やし、下の突破を防ぐ★ */
-    .calendar-container { width: 92%; max-width: 370px; padding: 15px 10px 25px 10px; margin-bottom: 20px; z-index: 10; }
-    .weekday-header { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; font-size: 12px; margin-bottom: 10px; color: #bbb; }
-    .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+    .calendar-container { width: 92%; max-width: 370px; padding: 15px 5px 25px 5px; margin-bottom: 20px; z-index: 10; box-sizing: border-box; }
     
-    /* ★真・ズレ修正: すべてのマスに最初から透明な枠を2px付ける★ */
+    /* ★修正: minmax(0, 1fr)を指定し、強制的に7等分を維持する★ */
+    .weekday-header { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); text-align: center; font-weight: bold; font-size: 12px; margin-bottom: 10px; color: #bbb; width: 100%; }
+    .calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; width: 100%; }
+    
     .day-box { 
-        aspect-ratio: 1; /* マスを完全な正方形に固定 */
+        width: 100%; /* 横幅を均等に */
+        aspect-ratio: 1; 
         display: flex; flex-direction: column; align-items: center; justify-content: flex-start; 
         padding-top: 6px; font-size: 13px; cursor: pointer; position: relative; z-index: 1;
-        /* ★DEBUG ADDITION★ */
-        border: 2px solid transparent; /* 透明な枠線を付ける */
-        box-sizing: border-box;       /* 枠線をマスの「内側」に含める計算にする（これで膨らまない） */
+        border: 2px solid transparent; 
+        box-sizing: border-box; 
     }
     
     .day-box.connected::before { content: ''; position: absolute; top: 12%; bottom: 12%; left: -2px; right: -2px; background: rgba(255, 188, 0, 0.15); z-index: -1; }
@@ -68,17 +68,11 @@ if ('serviceWorker' in navigator) {
     .day-box.conn-end::before { border-top-right-radius: 18px; border-bottom-right-radius: 18px; right: 3px; }
     .day-box.conn-solo::before { border-radius: 18px; left: 3px; right: 3px; }
     
-    /* ★真・ズレ修正: 当日は枠の色を変えるだけ★ */
-    .today { 
-        /* border: 2px solid #78b1ff; */ /* コメントアウト（day-boxのtransparentを利用） */
-        border-color: #78b1ff !important; /* 色だけ上書き */
-        background: #eef6ff !important; 
-        border-radius: 12px; 
-    }
+    .today { border-color: #78b1ff !important; background: #eef6ff !important; border-radius: 12px; }
     .day-num { font-weight: bold; color: #777; z-index: 2; margin-bottom: 4px; }
 
     .stamps { 
-        font-size: 16px; 
+        font-size: 14px; /* はみ出し防止で少し小さく */
         min-height: 1.2em; 
         z-index: 2; 
         display: flex; 
@@ -146,7 +140,6 @@ if ('serviceWorker' in navigator) {
 </div>
 
 <script>
-    // ★データ引き継ぎ修正: 過去の記録が消えないキーに戻す★
     let db = JSON.parse(localStorage.getItem('healthLogData_vFinal')) || {};
     const now = new Date();
     let selectedKey = null;
@@ -157,7 +150,6 @@ if ('serviceWorker' in navigator) {
         for (let y = now.getFullYear()-1; y <= now.getFullYear()+1; y++) ySel.add(new Option(y+"年",y));
         for (let m = 1; m <= 12; m++) mSel.add(new Option(m+"月",m));
         
-        // 強制的に今の年月を選択
         ySel.value = now.getFullYear();
         mSel.value = now.getMonth() + 1;
         
@@ -194,7 +186,15 @@ if ('serviceWorker' in navigator) {
         const cal = document.getElementById('calendar'); cal.innerHTML = '';
         const y = parseInt(document.getElementById('yearSelect').value), m = parseInt(document.getElementById('monthSelect').value);
         const first = new Date(y, m-1, 1).getDay(), last = new Date(y, m, 0).getDate();
-        for (let i=0; i<first; i++) cal.appendChild(document.createElement('div'));
+        
+        // ★修正: 1日の前の「空白マス」も、普通のマスと同じサイズで作って見えなくする（計算狂いを防止）★
+        for (let i=0; i<first; i++) {
+            const emptyEl = document.createElement('div');
+            emptyEl.className = 'day-box';
+            emptyEl.style.visibility = 'hidden'; 
+            cal.appendChild(emptyEl);
+        }
+        
         const dayEls = [];
         let todayDone = false;
         for (let d=1; d<=last; d++) {
