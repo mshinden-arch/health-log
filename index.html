@@ -8,11 +8,11 @@
 <meta name="theme-color" content="#fdfaf5">
 <title>健康ログ</title>
 
-<link rel="apple-touch-icon" href="./icon.png">
-<link rel="icon" href="./icon.png">
 <link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="https://icooon-mono.com/i/icon_11221/icon_112210.png">
 
 <script>
+// オフラインでも動かすためのService Worker登録
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
@@ -48,16 +48,19 @@ if ('serviceWorker' in navigator) {
     .nav-area { display: flex; gap: 8px; margin: 15px 0; align-items: center; z-index: 10; }
     select { padding: 8px 15px; border-radius: 12px; border: none; font-size: 15px; background: #fffefb; box-shadow: inset 2px 2px 5px #f2efeb, inset -2px -2px 5px #ffffff; font-weight: bold; color: #555; }
 
-    /* ★修正: padding-bottomを30pxに増やし、下の突破を防ぐ★ */
-    .calendar-container { width: 92%; max-width: 370px; padding: 15px 10px 30px 10px; margin-bottom: 20px; z-index: 10; box-sizing: border-box; }
+    /* ★修正: padding-bottomを25pxに増やし、下の突破を防ぐ★ */
+    .calendar-container { width: 92%; max-width: 370px; padding: 15px 10px 25px 10px; margin-bottom: 20px; z-index: 10; }
     .weekday-header { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; font-size: 12px; margin-bottom: 10px; color: #bbb; }
     .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
     
-    /* ★修正: マスを正方形（aspect-ratio: 1）に固定し、スタンプを上に詰める★ */
+    /* ★真・ズレ修正: すべてのマスに最初から透明な枠を2px付ける★ */
     .day-box { 
-        aspect-ratio: 1;
-        display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+        aspect-ratio: 1; /* マスを完全な正方形に固定 */
+        display: flex; flex-direction: column; align-items: center; justify-content: flex-start; 
         padding-top: 6px; font-size: 13px; cursor: pointer; position: relative; z-index: 1;
+        /* ★DEBUG ADDITION★ */
+        border: 2px solid transparent; /* 透明な枠線を付ける */
+        box-sizing: border-box;       /* 枠線をマスの「内側」に含める計算にする（これで膨らまない） */
     }
     
     .day-box.connected::before { content: ''; position: absolute; top: 12%; bottom: 12%; left: -2px; right: -2px; background: rgba(255, 188, 0, 0.15); z-index: -1; }
@@ -65,18 +68,24 @@ if ('serviceWorker' in navigator) {
     .day-box.conn-end::before { border-top-right-radius: 18px; border-bottom-right-radius: 18px; right: 3px; }
     .day-box.conn-solo::before { border-radius: 18px; left: 3px; right: 3px; }
     
-    .today { border: 2px solid #78b1ff; background: #eef6ff !important; border-radius: 12px; }
-    .day-num { font-weight: bold; color: #777; z-index: 2; line-height: 1; margin-bottom: 4px; }
+    /* ★真・ズレ修正: 当日は枠の色を変えるだけ★ */
+    .today { 
+        /* border: 2px solid #78b1ff; */ /* コメントアウト（day-boxのtransparentを利用） */
+        border-color: #78b1ff !important; /* 色だけ上書き */
+        background: #eef6ff !important; 
+        border-radius: 12px; 
+    }
+    .day-num { font-weight: bold; color: #777; z-index: 2; margin-bottom: 4px; }
 
     .stamps { 
-        font-size: 14px; 
+        font-size: 16px; 
+        min-height: 1.2em; 
         z-index: 2; 
         display: flex; 
         justify-content: center; 
         flex-wrap: wrap;
         gap: 1px;
         width: 100%;
-        line-height: 1;
     }
 
     #inputPanel { 
@@ -137,6 +146,7 @@ if ('serviceWorker' in navigator) {
 </div>
 
 <script>
+    // ★データ引き継ぎ修正: 過去の記録が消えないキーに戻す★
     let db = JSON.parse(localStorage.getItem('healthLogData_vFinal')) || {};
     const now = new Date();
     let selectedKey = null;
@@ -144,14 +154,10 @@ if ('serviceWorker' in navigator) {
     function init() {
         const ySel = document.getElementById('yearSelect');
         const mSel = document.getElementById('monthSelect');
+        for (let y = now.getFullYear()-1; y <= now.getFullYear()+1; y++) ySel.add(new Option(y+"年",y));
+        for (let m = 1; m <= 12; m++) mSel.add(new Option(m+"月",m));
         
-        for (let y = now.getFullYear()-1; y <= now.getFullYear()+1; y++) {
-            ySel.add(new Option(y+"年", y));
-        }
-        for (let m = 1; m <= 12; m++) {
-            mSel.add(new Option(m+"月", m));
-        }
-        
+        // 強制的に今の年月を選択
         ySel.value = now.getFullYear();
         mSel.value = now.getMonth() + 1;
         
