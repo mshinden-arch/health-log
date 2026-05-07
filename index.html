@@ -3,119 +3,272 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#fdfaf5">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#fdfaf5">
-<title>健康ログ</title>
+<meta name="apple-mobile-web-app-title" content="うんこログ">
 
-<link rel="manifest" href="./manifest.json">
-<link rel="apple-touch-icon" href="./icon.png">
-<link rel="icon" href="./icon.png">
+<title>うんこログ</title>
 
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
-  });
-}
-</script>
+<link rel="manifest" href="./manifest.json?v=6">
+<link rel="apple-touch-icon" href="./icon.png?v=6">
 
 <style>
-    body { 
-        font-family: 'Helvetica Neue', Arial, sans-serif; 
-        background: #fdfaf5; display: flex; flex-direction: column; align-items: center; 
-        padding: 0; margin: 0; color: #555; overflow-x: hidden;
-        user-select: none; -webkit-user-select: none;
-    }
-    #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.1); z-index: 50; }
-    
-    .neuo-card { background: #fffefb; border-radius: 25px; box-shadow: 6px 6px 12px #f2efeb, -6px -6px 12px #ffffff; border: 1px solid rgba(255,255,255,0.5); }
-    
-    .header { padding: 20px; width: 85%; max-width: 350px; text-align: center; margin-top: 20px; z-index: 10; position: relative; }
-    .streak-val { 
-        font-size: 48px; font-weight: 900; 
-        background: linear-gradient(135deg, #ffbc00, #ff5e3a);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        margin: 5px 0; display: inline-block;
-    }
-    
-    @keyframes jump { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
-    .streak-animate { animation: jump 0.4s ease-out; }
-    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-    .flash { animation: blink 1.5s infinite; }
-    .status-bar { font-size: 11px; color: #888; margin-top: 5px; font-weight: bold; }
+body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    background: #fdfaf5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0;
+    margin: 0;
+    color: #555;
+    overflow-x: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+}
 
-    .nav-area { display: flex; gap: 8px; margin: 15px 0; align-items: center; z-index: 10; }
-    select { padding: 8px 15px; border-radius: 12px; border: none; font-size: 15px; background: #fffefb; box-shadow: inset 2px 2px 5px #f2efeb, inset -2px -2px 5px #ffffff; font-weight: bold; color: #555; }
+#overlay, #reminderOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.12);
+}
 
-    .calendar-container { width: 92%; max-width: 370px; padding: 15px 5px 25px 5px; margin-bottom: 20px; z-index: 10; box-sizing: border-box; }
-    
-    /* ★修正: minmax(0, 1fr)を指定し、強制的に7等分を維持する★ */
-    .weekday-header { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); text-align: center; font-weight: bold; font-size: 12px; margin-bottom: 10px; color: #bbb; width: 100%; }
-    .calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; width: 100%; }
-    
-    .day-box { 
-        width: 100%; /* 横幅を均等に */
-        aspect-ratio: 1; 
-        display: flex; flex-direction: column; align-items: center; justify-content: flex-start; 
-        padding-top: 6px; font-size: 13px; cursor: pointer; position: relative; z-index: 1;
-        border: 2px solid transparent; 
-        box-sizing: border-box; 
-    }
-    
-    .day-box.connected::before { content: ''; position: absolute; top: 12%; bottom: 12%; left: -2px; right: -2px; background: rgba(255, 188, 0, 0.15); z-index: -1; }
-    .day-box.conn-start::before { border-top-left-radius: 18px; border-bottom-left-radius: 18px; left: 3px; }
-    .day-box.conn-end::before { border-top-right-radius: 18px; border-bottom-right-radius: 18px; right: 3px; }
-    .day-box.conn-solo::before { border-radius: 18px; left: 3px; right: 3px; }
-    
-    .today { border-color: #78b1ff !important; background: #eef6ff !important; border-radius: 12px; }
-    .day-num { font-weight: bold; color: #777; z-index: 2; margin-bottom: 4px; }
+#overlay { z-index: 50; }
+#reminderOverlay { z-index: 300; background: rgba(0,0,0,0.25); }
 
-    .stamps { 
-        font-size: 14px; /* はみ出し防止で少し小さく */
-        min-height: 1.2em; 
-        z-index: 2; 
-        display: flex; 
-        justify-content: center; 
-        flex-wrap: wrap;
-        gap: 1px;
-        width: 100%;
-    }
+.neuo-card {
+    background: #fffefb;
+    border-radius: 25px;
+    box-shadow: 6px 6px 12px #f2efeb, -6px -6px 12px #ffffff;
+    border: 1px solid rgba(255,255,255,0.5);
+}
 
-    #inputPanel { 
-        display: none; position: fixed; bottom: 0; left: 0; right: 0; 
-        background: #fffefb; padding: 30px 20px 60px 20px; border-radius: 35px 35px 0 0;
-        box-shadow: 0 -10px 40px rgba(0,0,0,0.1); text-align: center; z-index: 100;
-        animation: slideUp 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
-    }
-    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.header {
+    padding: 20px;
+    width: 85%;
+    max-width: 350px;
+    text-align: center;
+    margin-top: 20px;
+    z-index: 10;
+}
 
-    .panel-btn-container { display: flex; justify-content: center; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
-    .panel-btn { 
-        width: 100px; height: 85px; font-size: 16px; font-weight: bold; border-radius: 22px; border: none; color: white;
-        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-    }
-    .active-poop { border: 3px solid #a0522d !important; background: #fffefb !important; color: #a0522d !important; }
-    .active-run { border: 3px solid #4cd964 !important; background: #fffefb !important; color: #4cd964 !important; }
-    .active-rest { border: 3px solid #5ac8fa !important; background: #fffefb !important; color: #5ac8fa !important; }
+.status-main {
+    font-size: 18px;
+    font-weight: 900;
+    color: #5a3825;
+    line-height: 1.5;
+}
 
-    #celebration { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 200; pointer-events: none; }
-    .congrats-text { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; text-align:center; z-index: 210; }
-    .confetti { position: absolute; width: 8px; height: 8px; animation: fall linear forwards; }
-    @keyframes fall { to { transform: translateY(100vh) rotate(360deg); } }
-    .gold-ring { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); border: 4px solid gold; border-radius: 50%; animation: ring-expand 1s ease-out forwards; }
-    @keyframes ring-expand { 0% { width: 0; height: 0; opacity: 1; } 100% { width: 500px; height: 500px; opacity: 0; } }
+.status-sub {
+    font-size: 12px;
+    color: #888;
+    margin-top: 6px;
+    font-weight: bold;
+}
+
+.nav-area {
+    display: flex;
+    gap: 8px;
+    margin: 15px 0;
+    align-items: center;
+    z-index: 10;
+}
+
+select {
+    padding: 8px 15px;
+    border-radius: 12px;
+    border: none;
+    font-size: 15px;
+    background: #fffefb;
+    box-shadow: inset 2px 2px 5px #f2efeb, inset -2px -2px 5px #ffffff;
+    font-weight: bold;
+    color: #555;
+}
+
+.calendar-container {
+    width: 92%;
+    max-width: 370px;
+    padding: 15px 5px;
+    margin-bottom: 20px;
+    z-index: 10;
+}
+
+.weekday-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-weight: bold;
+    font-size: 12px;
+    margin-bottom: 10px;
+    color: #bbb;
+}
+
+.calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+
+.day-box {
+    min-height: 58px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+    border-radius: 12px;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.day-box.has-poop {
+    background: rgba(160, 82, 45, 0.10);
+}
+
+.today {
+    border: 2px solid #78b1ff;
+    background: #eef6ff !important;
+}
+
+.day-num {
+    font-weight: bold;
+    color: #777;
+    z-index: 2;
+    margin-bottom: 4px;
+}
+
+.stamps {
+    font-size: 18px;
+    min-height: 1.2em;
+    z-index: 2;
+}
+
+#inputPanel {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fffefb;
+    padding: 30px 20px 60px 20px;
+    border-radius: 35px 35px 0 0;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+    text-align: center;
+    z-index: 100;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+.panel-btn-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 15px;
+}
+
+.panel-btn {
+    width: 140px;
+    height: 90px;
+    font-size: 17px;
+    font-weight: bold;
+    border-radius: 24px;
+    border: none;
+    color: white;
+    background: #a0522d;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.active-poop {
+    border: 3px solid #a0522d !important;
+    background: #fffefb !important;
+    color: #a0522d !important;
+}
+
+.hint {
+    font-size: 12px;
+    color: #999;
+    margin-top: 12px;
+    line-height: 1.5;
+}
+
+.reminder-card {
+    display: none;
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 82%;
+    max-width: 340px;
+    background: #fffefb;
+    border-radius: 28px;
+    padding: 26px 20px;
+    text-align: center;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.22);
+    z-index: 310;
+}
+
+.reminder-title {
+    font-size: 14px;
+    color: #999;
+    font-weight: bold;
+    margin-bottom: 12px;
+}
+
+.reminder-message {
+    font-size: 22px;
+    line-height: 1.5;
+    font-weight: 900;
+    color: #5a3825;
+    margin: 12px 0 20px;
+}
+
+.reminder-sub {
+    font-size: 12px;
+    line-height: 1.6;
+    color: #888;
+    margin-bottom: 18px;
+}
+
+.confirm-btn {
+    width: 100%;
+    border: none;
+    border-radius: 18px;
+    padding: 15px 10px;
+    background: #a0522d;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+}
 </style>
 </head>
+
 <body>
 
 <div id="overlay" onclick="closePanel()"></div>
-<div id="celebration"></div>
+
+<div id="reminderOverlay"></div>
+<div id="reminderCard" class="reminder-card">
+    <div class="reminder-title">リマインダー</div>
+    <div id="reminderMessage" class="reminder-message"></div>
+    <div id="reminderSub" class="reminder-sub"></div>
+    <button class="confirm-btn" onclick="confirmReminder()">確認しました</button>
+</div>
 
 <div class="header neuo-card">
-    <div style="font-size:11px; color:#aaa; font-weight:bold;">TOTAL STREAK</div>
-    <div><span id="totalStreak" class="streak-val">0</span><span id="streakUnit" style="font-size:18px; font-weight:bold; color:#555;"> 日目</span></div>
-    <div id="restStatus" class="status-bar">🏠 おやすみ残: 1回</div>
+    <div id="todayStatusMain" class="status-main">今日の記録：未入力</div>
+    <div id="todayStatusSub" class="status-sub">出ていない日数を確認中</div>
 </div>
 
 <div class="nav-area">
@@ -125,7 +278,13 @@ if ('serviceWorker' in navigator) {
 
 <div class="calendar-container neuo-card">
     <div class="weekday-header">
-        <div style="color:#ff807b">日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div style="color:#78b1ff">土</div>
+        <div style="color:#ff807b">日</div>
+        <div>月</div>
+        <div>火</div>
+        <div>水</div>
+        <div>木</div>
+        <div>金</div>
+        <div style="color:#78b1ff">土</div>
     </div>
     <div id="calendar" class="calendar"></div>
 </div>
@@ -133,157 +292,242 @@ if ('serviceWorker' in navigator) {
 <div id="inputPanel">
     <h3 id="selectedDateText" style="margin-top:0;">日付を選択</h3>
     <div class="panel-btn-container">
-        <button id="poopBtnPanel" class="panel-btn" style="background:#a0522d;" onclick="toggleMark('poop')"><span>💩</span><span>うんこ</span></button>
-        <button id="runBtnPanel" class="panel-btn" style="background:#4cd964;" onclick="toggleMark('run')"><span>🏃</span><span>運動</span></button>
-        <button id="restBtnPanel" class="panel-btn" style="background:#5ac8fa;" onclick="toggleMark('rest')"><span>🏠</span><span>お休み</span></button>
+        <button id="poopBtnPanel" class="panel-btn" onclick="togglePoop()">
+            <span style="font-size:26px;">💩</span>
+            <span>うんこ</span>
+        </button>
     </div>
+    <div class="hint">押すたびに「記録あり／なし」が切り替わります</div>
 </div>
 
 <script>
-    let db = JSON.parse(localStorage.getItem('healthLogData_vFinal')) || {};
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js?v=6');
+    });
+}
+
+const STORAGE_KEY = 'poopLogData_v1';
+const REMINDER_ACK_KEY = 'poopReminderAck_v1';
+
+let db = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+let reminderAck = JSON.parse(localStorage.getItem(REMINDER_ACK_KEY)) || {};
+let selectedKey = null;
+let activeReminderKey = null;
+
+function init() {
     const now = new Date();
-    let selectedKey = null;
+    const ySel = document.getElementById('yearSelect');
+    const mSel = document.getElementById('monthSelect');
 
-    function init() {
-        const ySel = document.getElementById('yearSelect');
-        const mSel = document.getElementById('monthSelect');
-        for (let y = now.getFullYear()-1; y <= now.getFullYear()+1; y++) ySel.add(new Option(y+"年",y));
-        for (let m = 1; m <= 12; m++) mSel.add(new Option(m+"月",m));
-        
-        ySel.value = now.getFullYear();
-        mSel.value = now.getMonth() + 1;
-        
-        checkAutoRest();
-        renderCalendar();
+    ySel.innerHTML = '';
+    mSel.innerHTML = '';
+
+    for (let y = now.getFullYear() - 1; y <= now.getFullYear() + 1; y++) {
+        ySel.add(new Option(y + "年", y, false, y === now.getFullYear()));
     }
 
-    function checkAutoRest() {
-        const yesterday = new Date(); yesterday.setDate(now.getDate()-1);
-        const yKey = `${yesterday.getFullYear()}-${yesterday.getMonth()+1}-${yesterday.getDate()}`;
-        if (!db[yKey] || (!db[yKey].run && !db[yKey].rest)) {
-            const limit = getRestLimit(yesterday.getFullYear(), yesterday.getMonth()+1);
-            if (getRestCount(yesterday.getFullYear(), yesterday.getMonth()+1) < limit) {
-                if (!db[yKey]) db[yKey] = { poop:false, run:false, rest:false };
-                db[yKey].rest = true; save();
-            }
-        }
+    for (let m = 1; m <= 12; m++) {
+        mSel.add(new Option(m + "月", m, false, m === now.getMonth() + 1));
     }
 
-    function getRestLimit(y, m) {
-        let py = y, pm = m - 1; if (pm === 0) { pm = 12; py--; }
-        const days = new Date(py, pm, 0).getDate();
-        let perfect = true, hasData = false;
-        for (let d=1; d<=days; d++) {
-            const k = `${py}-${pm}-${d}`; if (db[k]) hasData = true;
-            if (!db[k] || !db[k].run) { perfect = false; break; }
-        }
-        return (perfect && hasData) ? 2 : 1;
+    renderCalendar();
+    checkReminder();
+    setInterval(checkReminder, 60 * 1000);
+}
+
+function makeKey(y, m, d) {
+    return `${y}-${m}-${d}`;
+}
+
+function getTodayKey() {
+    const today = new Date();
+    return makeKey(today.getFullYear(), today.getMonth() + 1, today.getDate());
+}
+
+function getLog(key) {
+    return db[key] || { poop: false };
+}
+
+function renderCalendar() {
+    const cal = document.getElementById('calendar');
+    cal.innerHTML = '';
+
+    const y = parseInt(document.getElementById('yearSelect').value);
+    const m = parseInt(document.getElementById('monthSelect').value);
+
+    const first = new Date(y, m - 1, 1).getDay();
+    const last = new Date(y, m, 0).getDate();
+
+    for (let i = 0; i < first; i++) {
+        cal.appendChild(document.createElement('div'));
     }
 
-    function getRestCount(y, m) { return Object.keys(db).filter(k => k.startsWith(`${y}-${m}-`) && db[k].rest).length; }
+    for (let d = 1; d <= last; d++) {
+        const key = makeKey(y, m, d);
+        const log = getLog(key);
+        const el = document.createElement('div');
 
-    function renderCalendar() {
-        const cal = document.getElementById('calendar'); cal.innerHTML = '';
-        const y = parseInt(document.getElementById('yearSelect').value), m = parseInt(document.getElementById('monthSelect').value);
-        const first = new Date(y, m-1, 1).getDay(), last = new Date(y, m, 0).getDate();
-        
-        // ★修正: 1日の前の「空白マス」も、普通のマスと同じサイズで作って見えなくする（計算狂いを防止）★
-        for (let i=0; i<first; i++) {
-            const emptyEl = document.createElement('div');
-            emptyEl.className = 'day-box';
-            emptyEl.style.visibility = 'hidden'; 
-            cal.appendChild(emptyEl);
-        }
-        
-        const dayEls = [];
-        let todayDone = false;
-        for (let d=1; d<=last; d++) {
-            const key = `${y}-${m}-${d}`;
-            const el = document.createElement('div'); el.className = 'day-box';
-            const isToday = (y===now.getFullYear() && m===now.getMonth()+1 && d===now.getDate());
-            if (isToday) el.classList.add('today');
-            const log = db[key] || { poop:false, run:false, rest:false };
-            if (isToday && (log.run || log.rest || log.poop)) todayDone = true;
-            el.innerHTML = `<span class="day-num">${d}</span><div class="stamps">${(log.poop?'💩':'')}${(log.run?'🏃':'')}${(log.rest?'🏠':'')}</div>`;
-            el.onclick = () => openPanel(key);
-            cal.appendChild(el);
-            dayEls[d] = { el, active: (log.run || log.rest) };
-        }
-        for (let d=1; d<=last; d++) {
-            if (dayEls[d] && dayEls[d].active) {
-                const prev = d > 1 && dayEls[d-1] && dayEls[d-1].active;
-                const next = d < last && dayEls[d+1] && dayEls[d+1].active;
-                dayEls[d].el.classList.add('connected');
-                if (!prev && !next) dayEls[d].el.classList.add('conn-solo');
-                else if (!prev) dayEls[d].el.classList.add('conn-start');
-                else if (!next) dayEls[d].el.classList.add('conn-end');
-            }
-        }
-        calculateTotal();
-        const lim = getRestLimit(y, m);
-        document.getElementById('restStatus').innerText = `🏠 おやすみ残: ${lim - getRestCount(y, m)} / ${lim}回`;
-        
-        if(!todayDone) { 
-            document.getElementById('totalStreak').classList.add('flash');
-            document.getElementById('streakUnit').classList.add('flash');
-        } else { 
-            document.getElementById('totalStreak').classList.remove('flash'); 
-            document.getElementById('streakUnit').classList.remove('flash');
-        }
+        el.className = 'day-box';
+
+        const today = new Date();
+        const isToday =
+            y === today.getFullYear() &&
+            m === today.getMonth() + 1 &&
+            d === today.getDate();
+
+        if (isToday) el.classList.add('today');
+        if (log.poop) el.classList.add('has-poop');
+
+        el.innerHTML = `
+            <span class="day-num">${d}</span>
+            <div class="stamps">${log.poop ? '💩' : ''}</div>
+        `;
+
+        el.onclick = () => openPanel(key);
+        cal.appendChild(el);
     }
 
-    function calculateTotal() {
-        let count = 0; Object.values(db).forEach(v => { if(v.run || v.rest) count++; });
-        document.getElementById('totalStreak').innerText = count;
-        return count;
+    updateHeader();
+}
+
+function updateHeader() {
+    const todayKey = getTodayKey();
+    const todayDone = db[todayKey] && db[todayKey].poop;
+    const noPoopDays = getNoPoopStreakIncludingToday();
+
+    document.getElementById('todayStatusMain').innerText =
+        todayDone ? '今日の記録：💩 済み' : '今日の記録：未入力';
+
+    document.getElementById('todayStatusSub').innerText =
+        todayDone ? '今日は出ています' : `出ていない日：${noPoopDays}日目`;
+}
+
+function openPanel(key) {
+    selectedKey = key;
+    document.getElementById('selectedDateText').innerText = key.replace(/-/g, '/');
+
+    const log = getLog(key);
+    document.getElementById('poopBtnPanel').className =
+        'panel-btn' + (log.poop ? ' active-poop' : '');
+
+    document.getElementById('inputPanel').style.display = 'block';
+    document.getElementById('overlay').style.display = 'block';
+}
+
+function closePanel() {
+    document.getElementById('inputPanel').style.display = 'none';
+    document.getElementById('overlay').style.display = 'none';
+}
+
+function togglePoop() {
+    if (!selectedKey) return;
+
+    if (!db[selectedKey]) {
+        db[selectedKey] = { poop: false };
     }
 
-    function toggleMark(type) {
-        if (!db[selectedKey]) db[selectedKey] = { poop:false, run:false, rest:false };
-        if (type === 'rest' && !db[selectedKey].rest) {
-            const p = selectedKey.split('-');
-            if (getRestCount(p[0], p[1]) >= getRestLimit(p[0], p[1])) { alert("おやすみ上限です"); return; }
-        }
-        db[selectedKey][type] = !db[selectedKey][type];
-        save(); renderCalendar();
-        if ((type==='run'||type==='rest') && db[selectedKey][type]) {
-            document.getElementById('totalStreak').classList.add('streak-animate');
-            setTimeout(()=>document.getElementById('totalStreak').classList.remove('streak-animate'), 400);
-            checkCelebration(calculateTotal());
-        }
-        setTimeout(closePanel, 300);
+    db[selectedKey].poop = !db[selectedKey].poop;
+
+    if (!db[selectedKey].poop) {
+        delete db[selectedKey];
     }
 
-    function checkCelebration(count) { 
-        if (count > 0 && count % 25 === 0) {
-            let level = (count % 100 === 0) ? 3 : (count % 50 === 0 ? 2 : 1);
-            startCelebration(count, level); 
+    save();
+    renderCalendar();
+    checkReminder();
+
+    setTimeout(closePanel, 200);
+}
+
+function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+}
+
+function saveReminderAck() {
+    localStorage.setItem(REMINDER_ACK_KEY, JSON.stringify(reminderAck));
+}
+
+function getNoPoopStreakIncludingToday() {
+    const today = new Date();
+    let streak = 0;
+
+    for (let i = 0; i < 365; i++) {
+        const target = new Date(today);
+        target.setDate(today.getDate() - i);
+
+        const key = makeKey(
+            target.getFullYear(),
+            target.getMonth() + 1,
+            target.getDate()
+        );
+
+        if (db[key] && db[key].poop) {
+            break;
         }
+
+        streak++;
     }
 
-    function startCelebration(count, level) {
-        const div = document.getElementById('celebration'); div.style.display = 'block';
-        div.innerHTML = `<div class="congrats-text neuo-card" style="padding:20px; background:white;"><h2>${level===3?'LEGEND!':(level===2?'Amazing!':'Nice!')}</h2><h1>${count}日達成！</h1></div>`;
-        if (level >= 2) { const ring = document.createElement('div'); ring.className = 'gold-ring'; div.appendChild(ring); }
-        for (let i=0; i<level*40; i++) {
-            const c = document.createElement('div'); c.className = 'confetti';
-            c.style.cssText = `background:hsl(${Math.random()*360},80%,60%); left:${Math.random()*100}vw; top:-10px; animation:fall ${Math.random()*2+1}s linear forwards;`;
-            div.appendChild(c);
-        }
-        setTimeout(() => { div.style.display='none'; }, 4000);
+    return streak;
+}
+
+function checkReminder() {
+    const current = new Date();
+    const todayKey = makeKey(
+        current.getFullYear(),
+        current.getMonth() + 1,
+        current.getDate()
+    );
+
+    if (current.getHours() < 22) return;
+    if (db[todayKey] && db[todayKey].poop) return;
+
+    const noPoopDays = getNoPoopStreakIncludingToday();
+
+    let message = '';
+    let reminderType = '';
+
+    if (noPoopDays === 2) {
+        message = '3Aマグネシアを飲んでください';
+        reminderType = 'magnesia';
+    } else if (noPoopDays >= 3) {
+        message = 'コーラックを飲んでください';
+        reminderType = 'colac';
+    } else {
+        return;
     }
 
-    function openPanel(key) {
-        selectedKey = key; document.getElementById('selectedDateText').innerText = key.replace(/-/g, '/');
-        const log = db[key] || { poop:false, run:false, rest:false };
-        document.getElementById('poopBtnPanel').className = 'panel-btn' + (log.poop?' active-poop':'');
-        document.getElementById('runBtnPanel').className = 'panel-btn' + (log.run?' active-run':'');
-        document.getElementById('restBtnPanel').className = 'panel-btn' + (log.rest?' active-rest':'');
-        document.getElementById('inputPanel').style.display = 'block'; document.getElementById('overlay').style.display = 'block';
+    const reminderKey = `${todayKey}_${reminderType}`;
+
+    if (reminderAck[reminderKey]) return;
+
+    activeReminderKey = reminderKey;
+    showReminder(message, noPoopDays);
+}
+
+function showReminder(message, noPoopDays) {
+    document.getElementById('reminderMessage').innerText = message;
+    document.getElementById('reminderSub').innerText =
+        `うんこなし ${noPoopDays}日目です。服用量・服用可否は薬の説明や医師・薬剤師の指示に従ってください。`;
+
+    document.getElementById('reminderOverlay').style.display = 'block';
+    document.getElementById('reminderCard').style.display = 'block';
+}
+
+function confirmReminder() {
+    if (activeReminderKey) {
+        reminderAck[activeReminderKey] = true;
+        saveReminderAck();
     }
-    function closePanel() { document.getElementById('inputPanel').style.display='none'; document.getElementById('overlay').style.display='none'; }
-    function save() { localStorage.setItem('healthLogData_vFinal', JSON.stringify(db)); }
-    init();
+
+    document.getElementById('reminderOverlay').style.display = 'none';
+    document.getElementById('reminderCard').style.display = 'none';
+    activeReminderKey = null;
+}
+
+init();
 </script>
+
 </body>
 </html>
